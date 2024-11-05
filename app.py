@@ -1,5 +1,10 @@
-import streamlit as st
+import streamlit as st 
 import json
+import re
+
+# `prompt_template` 안에 있는 `{}`의 개수를 계산하는 함수
+def count_placeholders(template):
+    return len(re.findall(r'\{\}', template))
 
 # JSON 파일 불러오기
 with open('problems.json', 'r', encoding='utf-8') as file:
@@ -52,10 +57,16 @@ for tab, (problem_key, problem_data) in zip(tabs, problems.items()):
             with col:
                 if st.button(code, key=f"{problem_key}_{code}"):
                     st.session_state.user_prompt[problem_key].append(code)
-                    st.session_state.formatted_prompt[problem_key] = problem_data["prompt_template"].format(
-                        "\n".join(st.session_state.user_prompt[problem_key][:-1]),
-                        st.session_state.user_prompt[problem_key][-1] if st.session_state.user_prompt[problem_key] else ""
-                    )
+                    
+                    # `{}` 개수에 맞는 동적 값 생성
+                    placeholder_count = count_placeholders(problem_data["prompt_template"])
+                    formatted_values = st.session_state.user_prompt[problem_key][-placeholder_count:]
+                    
+                    # 필요한 값이 부족한 경우 빈 문자열로 채움
+                    while len(formatted_values) < placeholder_count:
+                        formatted_values.append("")
+                    
+                    st.session_state.formatted_prompt[problem_key] = problem_data["prompt_template"].format(*formatted_values)
 
         # 코드 형식 출력 (들여쓰기 적용)
         formatted_code_display = st.session_state.formatted_prompt[problem_key].replace("\n", "\n    ")
